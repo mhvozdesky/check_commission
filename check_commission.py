@@ -4,6 +4,9 @@ import win32com.client
 from pywinauto import application
 from tkinter import Tk
 
+file = open(r'd:\Users\maksim.gvozdetskiy\Desktop\test_run.txt', 'w')
+file.close()
+
 id_process = 6816
 book = r'd:\Users\maksim.gvozdetskiy\Desktop\test_run.xlsx'
 #file_input = r'd:\Users\maksim.gvozdetskiy\Desktop\check_applications.txt'
@@ -106,6 +109,12 @@ def insert_application(P_application):
     #open the editing dialog    
     P.winForm[u'\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c'].click()
 
+def global_error(P_application, mane_fun):
+    P.launch = True
+    bad_application(P_application)
+    with open(r'd:\Users\maksim.gvozdetskiy\Desktop\test_run.txt', 'a') as file:
+        file.write(P_application +  '--'  + mane_fun + '\n')
+
 def start_check(sheet):
     '''Reads an excel file. Records the commission of the second crown. 
     If there is an error - leaves the second column empty
@@ -127,26 +136,33 @@ def start_check(sheet):
                 
         try:
             #insert a request
-            #verification is not done, "Next" is not sent
             if insert_application(P_application) == "Next":
                 P.launch = True
                 bad_application(P_application)
-            
+        except:
+            global_error(P_application, 'insert_application')
+                
+        try:
             #pick up a dialogue    
             if pickUp_dialogue(P_application) == 'Next':
                 P.launch = True
                 bad_application(P_application)
-                
+        except:
+            global_error(P_application, 'pickUp_dialogue')
+                    
+                    
+        try:
             #get the amount of payment    
             usd, uah = payment()
+        except:
+            global_error(P_application, 'payment')
             
+        try:
             #get a commission
             commission = get_commission()
-            
             sheet.Cells(line_number,2).value = str(((float(uah) / float(usd.replace(',', ''))) * float(commission)))
         except:
-            P.launch = True
-            bad_application(P_application)
+            global_error(P_application, 'get_commission')
                 
 if __name__ == '__main__':
     P = Pegasys() 
