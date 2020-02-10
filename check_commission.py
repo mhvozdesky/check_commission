@@ -4,7 +4,13 @@ import win32com.client
 from pywinauto import application
 from tkinter import Tk
 
+give_commission = True
+#file with errors. What were the main features of the bugs
 file = open(r'd:\Users\maksim.gvozdetskiy\Desktop\test_run.txt', 'w')
+file.close()
+
+#log file
+file = open(r'd:\Users\maksim.gvozdetskiy\Desktop\test_run_log.txt', 'w')
 file.close()
 
 id_process = 6816
@@ -14,7 +20,8 @@ book = r'd:\Users\maksim.gvozdetskiy\Desktop\test_run.xlsx'
 element_coordinates = {'application_large_table': (300, 152),
                        'payment': (604, 188),
                        'uah': (609, 683),
-                       'commission': (741, 187)
+                       'commission': (741, 187),
+                       'per_commission': (0, 0)
                        } #for mouse
 
 bad_result = 'no result'
@@ -30,11 +37,12 @@ def bad_application(P_application):
     else:
         fulfilled_applications[P_application] = 1
         
-
 def get_commission():
     pywinauto.mouse.click(button='left', coords=element_coordinates['commission'])
     commission = P.dialog[u'19'].texts()[0]
+    write_log('get_commission', P.dialog[u'19'].texts())
     P.dialog.close()
+    
     P.winForm.Edit15.double_click()
     P.winForm.Edit15.type_keys('{BACKSPACE}')
     
@@ -62,6 +70,21 @@ def payment():
     
     return (usd, uah)
 
+def write_log(step, *args):
+    if step == 'start':
+        with open(r'd:\Users\maksim.gvozdetskiy\Desktop\test_run_log.txt', 'a') as file:
+            file.write('\n' + args[0] + '\n')
+    elif step == 'pickUp_dialogue':
+        with open(r'd:\Users\maksim.gvozdetskiy\Desktop\test_run_log.txt', 'a') as file:
+            file.write(' ' * 3 + 'Заявка {0}; В диалоге {1}\n'.format(args[0], args[1]))
+    elif step == 'payment':
+        with open(r'd:\Users\maksim.gvozdetskiy\Desktop\test_run_log.txt', 'a') as file:
+            file.write(' ' * 3 + 'USD {0}; UAH {1}\n'.format(args[0], args[1]))
+    elif step == 'get_commission':
+        with open(r'd:\Users\maksim.gvozdetskiy\Desktop\test_run_log.txt', 'a') as file:
+            file.write(' ' * 3 + 'Коммисия {}\n'.format(args[0]))
+        
+
 def pickUp_dialogue(P_application):
     text = u'\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435 \u0437\u0430\u044f\u0432\u043a\u0438 #{}'.format(P_application)
     P.dialog = P.app[text]
@@ -73,10 +96,12 @@ def pickUp_dialogue(P_application):
     element_coordinates['uah'] = (P.dialog.Rectangle().left + 355, P.dialog.Rectangle().top + 545)
     element_coordinates['commission'] = (P.dialog.Rectangle().left + 500, P.dialog.Rectangle().top + 54)
     
+    write_log('pickUp_dialogue', P_application, P.dialog[u'38'].texts())
     if P.dialog[u'38'].texts()[0] != P_application:
         #this dialogue is not our application
         P.dialog.close()
         return 'Next'
+
 
 def insert_application(P_application):
     '''Search by application. Opens an application for editing.
@@ -105,7 +130,19 @@ def insert_application(P_application):
             #time.sleep(2)
         #else:
             #return "Next"
-        
+    c = P.winForm[u'WindowsForms10.Window.8.app.0.171b980_r12_ad232'].Rectangle()
+    element_coordinates['per_commission'] = (c.left + 27, c.top + 37)
+    
+    if give_commission:
+        try:
+            pywinauto.mouse.click(button='left', coords=element_coordinates['per_commission'])
+            table = P.winForm[u'WindowsForms10.Window.8.app.0.171b980_r12_ad232']
+            table.type_keys('^c')
+            P.per_com = Tk().clipboard_get()
+            P.per_com = float(P.per_com.strip('%'))
+        except:
+            P.per_com = 'ERROR'
+
     #open the editing dialog    
     P.winForm[u'\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c'].click()
 
@@ -133,7 +170,8 @@ def start_check(sheet):
         P_application = P_application.strip(' ') #remove space
         if sheet.Cells(line_number,2).value != None or fulfilled_applications.get(P_application, -1) == 2:
             continue
-                
+        
+        write_log('start', P_application)        
         try:
             #insert a request
             if insert_application(P_application) == "Next":
@@ -141,6 +179,7 @@ def start_check(sheet):
                 bad_application(P_application)
         except:
             global_error(P_application, 'insert_application')
+            continue
                 
         try:
             #pick up a dialogue    
@@ -149,20 +188,25 @@ def start_check(sheet):
                 bad_application(P_application)
         except:
             global_error(P_application, 'pickUp_dialogue')
-                    
+            continue        
                     
         try:
             #get the amount of payment    
             usd, uah = payment()
+            write_log('payment', usd, uah)
         except:
             global_error(P_application, 'payment')
-            
+            continue
+        
         try:
             #get a commission
             commission = get_commission()
             sheet.Cells(line_number,2).value = str(((float(uah) / float(usd.replace(',', ''))) * float(commission)))
+            if give_commission:
+                sheet.Cells(line_number,3).value = P.per_com
         except:
             global_error(P_application, 'get_commission')
+            continue
                 
 if __name__ == '__main__':
     P = Pegasys() 
