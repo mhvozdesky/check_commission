@@ -4,7 +4,7 @@ import win32com.client
 from pywinauto import application
 from tkinter import Tk
 
-id_process = 1388
+id_process = 6816
 book = r'd:\Users\maksim.gvozdetskiy\Desktop\test_run.xlsx'
 #file_input = r'd:\Users\maksim.gvozdetskiy\Desktop\check_applications.txt'
 #file_output = r'd:\Users\maksim.gvozdetskiy\Desktop\application_commission.txt'
@@ -37,17 +37,25 @@ def get_commission():
     
     return commission
 
+def get_uah():
+    pywinauto.mouse.click(button='left', coords=element_coordinates['uah'])
+    table = P.dialog[u'layoutControl12']
+    table.type_keys('^c')
+    
+    return Tk().clipboard_get()
+
 def payment():
     pywinauto.mouse.click(button='left', coords=element_coordinates['payment'])
     usd = P.dialog[u'30'].texts()[0]
     if usd == '': usd = P.dialog[u'31'].texts()[0]
     
     #get UAH
-    pywinauto.mouse.click(button='left', coords=element_coordinates['uah'])
-    table = P.dialog[u'layoutControl12']
-    table.type_keys('^c')
     
-    uah = Tk().clipboard_get()
+    uah = get_uah()
+    if uah == 'UAH':
+        old_x, old_y = element_coordinates['uah'][0], element_coordinates['uah'][1]
+        element_coordinates['uah'] = (old_x + 147, old_y)
+        uah = get_uah()
     
     return (usd, uah)
 
@@ -57,10 +65,15 @@ def pickUp_dialogue(P_application):
     #P.dialog.wait()
     time.sleep(2)
     
-    #if P.dialog[u'38'].texts()[0] != P_application:
-        ##this dialogue is not our application
-        #P.dialog.close()
-        #return 'Next'
+    #coordinate adapting
+    element_coordinates['payment'] = (P.dialog.Rectangle().left + 363, P.dialog.Rectangle().top + 54)
+    element_coordinates['uah'] = (P.dialog.Rectangle().left + 355, P.dialog.Rectangle().top + 545)
+    element_coordinates['commission'] = (P.dialog.Rectangle().left + 500, P.dialog.Rectangle().top + 54)
+    
+    if P.dialog[u'38'].texts()[0] != P_application:
+        #this dialogue is not our application
+        P.dialog.close()
+        return 'Next'
 
 def insert_application(P_application):
     '''Search by application. Opens an application for editing.
@@ -107,12 +120,14 @@ def start_check(sheet):
     for line_number in range(1, total_rows):
         line_number += 1 #the first line we do not need
         
-        P_application = sheet.Cells(line_number,1).value.strip('№')
+        P_application = sheet.Cells(line_number,1).value.strip('№') #delete character
+        P_application = P_application.strip(' ') #remove space
         if sheet.Cells(line_number,2).value != None or fulfilled_applications.get(P_application, -1) == 2:
             continue
                 
         try:
             #insert a request
+            #verification is not done, "Next" is not sent
             if insert_application(P_application) == "Next":
                 P.launch = True
                 bad_application(P_application)
