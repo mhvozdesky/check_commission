@@ -21,7 +21,8 @@ element_coordinates = {'application_large_table': (300, 152),
                        'payment': (604, 188),
                        'uah': (609, 683),
                        'commission': (741, 187),
-                       'per_commission': (0, 0)
+                       'per_commission': (0, 0),
+                       'close': (0, 0)
                        } #for mouse
 
 bad_result = 'no result'
@@ -51,6 +52,7 @@ def get_commission():
 def get_uah():
     pywinauto.mouse.click(button='left', coords=element_coordinates['uah'])
     table = P.dialog[u'layoutControl12']
+    table.type_keys('^c')
     table.type_keys('^c')
     
     return Tk().clipboard_get()
@@ -85,6 +87,15 @@ def write_log(step, *args):
             file.write(' ' * 3 + 'Коммисия {}\n'.format(args[0]))
         
 
+def close_manually():
+    pywinauto.mouse.click(button='left', coords=element_coordinates['close'])
+
+def close_dialog():
+    try:
+        P.dialog.close()
+    except:
+        close_manually()
+
 def pickUp_dialogue(P_application):
     text = u'\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435 \u0437\u0430\u044f\u0432\u043a\u0438 #{}'.format(P_application)
     P.dialog = P.app[text]
@@ -95,11 +106,12 @@ def pickUp_dialogue(P_application):
     element_coordinates['payment'] = (P.dialog.Rectangle().left + 363, P.dialog.Rectangle().top + 54)
     element_coordinates['uah'] = (P.dialog.Rectangle().left + 355, P.dialog.Rectangle().top + 545)
     element_coordinates['commission'] = (P.dialog.Rectangle().left + 500, P.dialog.Rectangle().top + 54)
+    element_coordinates['close'] = (P.dialog.Rectangle().left + 774, P.dialog.Rectangle().top + 19)
     
     write_log('pickUp_dialogue', P_application, P.dialog[u'38'].texts())
     if P.dialog[u'38'].texts()[0] != P_application:
         #this dialogue is not our application
-        P.dialog.close()
+        close_dialog()
         return 'Next'
 
 
@@ -138,8 +150,11 @@ def insert_application(P_application):
             pywinauto.mouse.click(button='left', coords=element_coordinates['per_commission'])
             table = P.winForm[u'WindowsForms10.Window.8.app.0.171b980_r12_ad232']
             table.type_keys('^c')
+            table.type_keys('^c')
             P.per_com = Tk().clipboard_get()
             P.per_com = float(P.per_com.strip('%'))
+            if P.per_com >= 16:
+                P.per_com = 'ERROR'
         except:
             P.per_com = 'ERROR'
 
@@ -179,6 +194,7 @@ def start_check(sheet):
                 bad_application(P_application)
         except:
             global_error(P_application, 'insert_application')
+            close_dialog()
             continue
                 
         try:
@@ -188,6 +204,7 @@ def start_check(sheet):
                 bad_application(P_application)
         except:
             global_error(P_application, 'pickUp_dialogue')
+            close_dialog()
             continue        
                     
         try:
@@ -196,6 +213,7 @@ def start_check(sheet):
             write_log('payment', usd, uah)
         except:
             global_error(P_application, 'payment')
+            close_dialog()
             continue
         
         try:
