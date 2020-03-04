@@ -4,7 +4,7 @@ import win32com.client
 from pywinauto import application
 from tkinter import Tk
 
-give_commission = True
+give_commission = False
 #file with errors. What were the main features of the bugs
 file = open(r'd:\Users\maksim.gvozdetskiy\Desktop\test_run.txt', 'w')
 file.close()
@@ -13,8 +13,9 @@ file.close()
 file = open(r'd:\Users\maksim.gvozdetskiy\Desktop\test_run_log.txt', 'w')
 file.close()
 
-id_process = 6816
+id_process = 4128
 book = r'd:\Users\maksim.gvozdetskiy\Desktop\test_run.xlsx'
+#book = r'd:\Users\maksim.gvozdetskiy\Desktop\12.xlsx'
 #file_input = r'd:\Users\maksim.gvozdetskiy\Desktop\check_applications.txt'
 #file_output = r'd:\Users\maksim.gvozdetskiy\Desktop\application_commission.txt'
 element_coordinates = {'application_large_table': (300, 152),
@@ -44,8 +45,8 @@ def get_commission():
     write_log('get_commission', P.dialog[u'19'].texts())
     P.dialog.close()
     
-    P.winForm.Edit15.double_click()
-    P.winForm.Edit15.type_keys('{BACKSPACE}')
+    P.winForm.Edit14.double_click()
+    P.winForm.Edit14.type_keys('{BACKSPACE}')
     
     return commission
 
@@ -122,13 +123,13 @@ def insert_application(P_application):
     P.winForm = P.app[u'WindowsForms10.Window.8.app.0.310f4af_r12_ad2']
     
     #check if any application is entered
-    entry_field = P.winForm.Edit15.texts()[0] 
+    entry_field = P.winForm.Edit14.texts()[0] 
     if entry_field != '':
-        P.winForm.Edit15.double_click()
-        P.winForm.Edit15.type_keys('{BACKSPACE}')
+        P.winForm.Edit14.double_click()
+        P.winForm.Edit14.type_keys('{BACKSPACE}')
         
-    P.winForm.Edit15.type_keys(P_application)
-    P.winForm.Edit15.type_keys('{ENTER}')
+    P.winForm.Edit14.type_keys(P_application)
+    P.winForm.Edit14.type_keys('{ENTER}')
     time.sleep(2)
     
     #check if the application was found
